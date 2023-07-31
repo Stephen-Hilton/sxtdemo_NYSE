@@ -1,0 +1,6 @@
+# ignore all . files and . folders, except .gitignore (this file)
+.*
+!/.gitignore
+*.full.ddl
+venv
+__pycache__/
