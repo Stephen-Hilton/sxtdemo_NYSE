@@ -1,7 +1,9 @@
 import yfinance as yf
 import pandas as pd
+import os 
+from pprint import pprint
 from datetime import datetime
-import pySXT 
+from spaceandtime import SpaceAndTime
 
 def download_stock_prices(symbol, start_date, end_date):
     try:
@@ -17,9 +19,14 @@ def download_stock_prices(symbol, start_date, end_date):
 if __name__ == "__main__":
     start_date = "2023-01-01"  # Replace with your desired start date
     end_date =  datetime.now().strftime('%Y-%m-%d')
-    sxt = pySXT.sxt('.env')
-    success, access_token, refresh_token, reauth_datetime = sxt.authenticate()
 
+    sxt = SpaceAndTime()
+    sxt.authenticate()
+
+    tablename = 'SXTDemo.Stocks'
+    biscuit = os.getenv('BISCUIT')
+
+    sxt.execute_query(f'DELETE from {tablename}', biscuits=biscuit)
 
     for symbol in ['AAPL','MSFT','GOOGL', 'AMZN']:
         data = download_stock_prices(symbol, start_date, end_date)
@@ -28,16 +35,18 @@ if __name__ == "__main__":
             data = pd.DataFrame(data).reset_index() # add date (from index)
             data.insert(loc=0, column='Symbol', value=symbol) # add symbol
 
-            sql = ["insert into SXTDEMO.STOCKS (Symbol, Stock_Date, Stock_Open, Stock_High, Stock_Low, Stock_Close, Stock_AdjClose, Stock_Volume) values "]
+            sql = [f"insert into {tablename} (Symbol, Stock_Date, Stock_Open, Stock_High, Stock_Low, Stock_Close, Stock_AdjClose, Stock_Volume) values "]
             for idx, row in data.iterrows():
                 sql.append(f"{c}('{row['Symbol']}', '{str(row['Date']).split(' ')[0]}', {round(row['Open'],2)}, {round(row['High'],2)}, {round(row['Low'],2)}, {round(row['Close'],2)}, {round(row['Adj Close'],2)}, {round(row['Volume'],2)} )")
                 c = ","
             sql = ''.join(sql)
 
-            status_code, json_response = sxt.query_dml(resourceId='SXTDEMO.STOCKS', sql=sql)
+            success, response = sxt.execute_query(sql_text=sql, sql_type=sxt.SQLTYPE.DML, resources='SXTDEMO.STOCKS', biscuits=biscuit)
 
-            if status_code != 200: 
-                print(json_response)
+            if success: 
+                pprint(sxt.execute_query(f'Select * from {tablename}'))
+            else:
+                print(response)
 
         else:
             print("Failed to fetch stock prices.")
