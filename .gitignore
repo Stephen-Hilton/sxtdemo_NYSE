@@ -2,5 +2,6 @@
 .*
 !/.gitignore
 *.full.ddl
+*.ddl
 venv
 __pycache__/
