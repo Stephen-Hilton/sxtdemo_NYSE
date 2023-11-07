@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import numpy as np
 import os 
 from pprint import pprint
 from datetime import datetime
@@ -23,7 +24,8 @@ if __name__ == "__main__":
     sxt = SpaceAndTime()
     sxt.authenticate()
 
-    tablename = 'SXTDemo.Stocks'
+    tamperproof = True
+    tablename = 'SXTDemo.Stocks_Tamperproof' if tamperproof else 'SXTDemo.Stocks'
     biscuit = os.getenv('BISCUIT')
 
     sxt.execute_query(f'DELETE from {tablename}', biscuits=biscuit)
@@ -33,11 +35,15 @@ if __name__ == "__main__":
         c = ' '
         if data is not None:
             data = pd.DataFrame(data).reset_index() # add date (from index)
-            data.insert(loc=0, column='Symbol', value=symbol) # add symbol
+            data.insert(loc=0, column='Symbol', value=symbol) # add symbol to front
+            if tamperproof: data['PROOF_ORDER'] = np.arange(data.shape[0]) # add Proof_Order to end
 
-            sql = [f"insert into {tablename} (Symbol, Stock_Date, Stock_Open, Stock_High, Stock_Low, Stock_Close, Stock_AdjClose, Stock_Volume) values "]
+            sql = [f"insert into {tablename} (Symbol, Stock_Date, Stock_Open, Stock_High, Stock_Low, Stock_Close, Stock_AdjClose, Stock_Volume{', Proof_Order' if tamperproof else ''}) values "]
             for idx, row in data.iterrows():
-                sql.append(f"{c}('{row['Symbol']}', '{str(row['Date']).split(' ')[0]}', {round(row['Open'],2)}, {round(row['High'],2)}, {round(row['Low'],2)}, {round(row['Close'],2)}, {round(row['Adj Close'],2)}, {round(row['Volume'],2)} )")
+                if tamperproof:
+                    sql.append(f"{c}('{row['Symbol']}', '{str(row['Date']).split(' ')[0]}', {round(row['Open'],2)}, {round(row['High'],2)}, {round(row['Low'],2)}, {round(row['Close'],2)}, {round(row['Adj Close'],2)}, {round(row['Volume'],2)}, {row['PROOF_ORDER']} )")
+                else:
+                    sql.append(f"{c}('{row['Symbol']}', '{str(row['Date']).split(' ')[0]}', {round(row['Open'],2)}, {round(row['High'],2)}, {round(row['Low'],2)}, {round(row['Close'],2)}, {round(row['Adj Close'],2)}, {round(row['Volume'],2)} )")
                 c = ","
             sql = ''.join(sql)
 
